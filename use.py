@@ -8,16 +8,15 @@ import shutil
 from PIL import Image
 from torchvision.models.resnet import ResNet50_Weights
 import torch.nn as nn
-from torch.utils.data import Dataset
 
 # Load pre-trained ResNet-50 model
 model = resnet50(weights=ResNet50_Weights.DEFAULT)
-num_categories = 10  # Change this to match your dataset
+num_categories = 11  # Change this to match your dataset
 num_features = model.fc.in_features
 model.fc = nn.Linear(num_features, num_categories)
 
 # Load the trained model weights
-model.load_state_dict(torch.load('trained_model.pth'))
+model.load_state_dict(torch.load('trained_model_backup.pth'))
 
 # Set the model to evaluation mode
 model.eval()
@@ -36,8 +35,15 @@ os.makedirs(output_folder, exist_ok=True)
 # Process each image in the "images" folder
 image_folder = 'images'
 image_files = os.listdir(image_folder)
+image_extensions = ['.jpg', '.jpeg', '.png', '.webp']
 
 for image_file in image_files:
+    # Check if the file is an image
+    _, ext = os.path.splitext(image_file)
+    if ext.lower() not in image_extensions:
+        print(f"Skipped {image_file}: Not an image file")
+        continue
+
     # Load and transform the image
     image_path = os.path.join(image_folder, image_file)
     image = Image.open(image_path).convert('RGB')
@@ -56,4 +62,4 @@ for image_file in image_files:
     # Move the image to the corresponding category folder in the output directory
     destination_path = os.path.join(category_folder, image_file)
     shutil.move(image_path, destination_path)
-    print(f"Moved {image_path} to {destination_path}")
+    print(f"Moved {image_path} => {destination_path}")

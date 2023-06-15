@@ -6,6 +6,9 @@ from torchvision.datasets import ImageFolder
 from torch.utils.data import DataLoader
 from torchvision.models import resnet50
 from torchvision.models.resnet import ResNet50_Weights
+import torch
+from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
+
 
 torch.cuda.set_per_process_memory_fraction(0.5)
 
@@ -48,14 +51,21 @@ criterion = nn.CrossEntropyLoss()
 optimizer = optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
 
 # Training loop
-num_epochs = 20
+num_epochs = 30
 device = torch.device("cpu")
 model.to(device)
 
 print("Start training...")
 
+# Initialize variables to store metrics
+total_labels = []
+total_predictions = []
+
 for epoch in range(num_epochs):
     running_loss = 0.0
+    total_labels_epoch = []
+    total_predictions_epoch = []
+
     for images, labels in data_loader:
         images, labels = images.to(device), labels.to(device)
         optimizer.zero_grad()
@@ -65,7 +75,34 @@ for epoch in range(num_epochs):
         optimizer.step()
         running_loss += loss.item()
 
-    print(f"Epoch {epoch + 1}/{num_epochs}, Loss: {running_loss / len(data_loader)}")
+        # Convert tensor predictions and labels to numpy arrays
+        _, predicted = torch.max(outputs.data, 1)
+        predicted = predicted.cpu().numpy()
+        labels = labels.cpu().numpy()
+
+        # Append predictions and labels for the epoch
+        total_labels_epoch.extend(labels)
+        total_predictions_epoch.extend(predicted)
+
+    # Calculate metrics for the epoch
+    accuracy = accuracy_score(total_labels_epoch, total_predictions_epoch)
+    precision = precision_score(total_labels_epoch, total_predictions_epoch, average='macro')
+    recall = recall_score(total_labels_epoch, total_predictions_epoch, average='macro')
+    f1 = f1_score(total_labels_epoch, total_predictions_epoch, average='macro')
+
+    # Append metrics to the overall lists
+    total_labels.extend(total_labels_epoch)
+    total_predictions.extend(total_predictions_epoch)
+
+    print(f"Epoch {epoch + 1}/{num_epochs}, Loss: {running_loss / len(data_loader)}, Accuracy: {accuracy}, Precision: {precision}, Recall: {recall}, F1 Score: {f1}")
+
+# Calculate overall metrics
+overall_accuracy = accuracy_score(total_labels, total_predictions)
+overall_precision = precision_score(total_labels, total_predictions, average='macro')
+overall_recall = recall_score(total_labels, total_predictions, average='macro')
+overall_f1 = f1_score(total_labels, total_predictions, average='macro')
+
+print(f"Overall Metrics: Accuracy: {overall_accuracy}, Precision: {overall_precision}, Recall: {overall_recall}, F1 Score: {overall_f1}")
 
 # Save the trained model
 torch.save(model.state_dict(), 'trained_model.pth')

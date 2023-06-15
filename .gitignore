@@ -1,5 +1,4 @@
-groups
-images
-categories
-
-embeddings.db
+*
+!train.py
+!use.py
+!.gitignore
