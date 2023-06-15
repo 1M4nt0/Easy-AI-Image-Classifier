@@ -46,6 +46,12 @@ dataset = ImageFolder('./categories', transform=transform, target_transform=conv
 batch_size = 32
 data_loader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
 
+# Create the ImageFolder dataset for validation
+validation_dataset = ImageFolder('./validation', transform=transform, target_transform=convert_palette_to_rgba)
+
+# Create a data loader for the validation dataset
+validation_loader = DataLoader(validation_dataset, batch_size=batch_size, shuffle=False)
+
 # Define the loss function and optimizer
 criterion = nn.CrossEntropyLoss()
 optimizer = optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
@@ -69,41 +75,43 @@ model.to(device)
 total_labels = []
 total_predictions = []
 
+# Initialize variables to store validation metrics
+total_validation_labels = []
+total_validation_predictions = []
+
 print("Start training...")
 for epoch in range(num_epochs):
     running_loss = 0.0
     total_labels_epoch = []
     total_predictions_epoch = []
 
+    # Training phase
+    model.train()
     for images, labels in data_loader:
+        # ...
+
+    # Validation phase
+    model.eval()
+    for images, labels in validation_loader:
         images, labels = images.to(device), labels.to(device)
-        optimizer.zero_grad()
-        outputs = model(images)
-        loss = criterion(outputs, labels)
-        loss.backward()
-        optimizer.step()
-        running_loss += loss.item()
+        with torch.no_grad():
+            outputs = model(images)
+            _, predicted = torch.max(outputs.data, 1)
+            predicted = predicted.cpu().numpy()
+            labels = labels.cpu().numpy()
+            total_validation_labels.extend(labels)
+            total_validation_predictions.extend(predicted)
 
-        # Convert tensor predictions and labels to numpy arrays
-        _, predicted = torch.max(outputs.data, 1)
-        predicted = predicted.cpu().numpy()
-        labels = labels.cpu().numpy()
+    # Calculate validation metrics for the epoch
+    val_accuracy = round(accuracy_score(total_validation_labels, total_validation_predictions), 4)
+    val_precision = round(precision_score(total_validation_labels, total_validation_predictions, average='macro', zero_division=1), 4)
+    val_recall = round(recall_score(total_validation_labels, total_validation_predictions, average='macro', zero_division=1), 4)
+    val_f1 = round(f1_score(total_validation_labels, total_validation_predictions, average='macro', zero_division=1), 4)
 
-        # Append predictions and labels for the epoch
-        total_labels_epoch.extend(labels)
-        total_predictions_epoch.extend(predicted)
-
-    # Calculate metrics for the epoch
-    accuracy = round(accuracy_score(total_labels_epoch, total_predictions_epoch), 4)
-    precision = round(precision_score(total_labels_epoch, total_predictions_epoch, average='macro', zero_division=1), 4)
-    recall = round(recall_score(total_labels_epoch, total_predictions_epoch, average='macro', zero_division=1), 4)
-    f1 = round(f1_score(total_labels_epoch, total_predictions_epoch, average='macro', zero_division=1), 4)
-
-    # Append metrics to the overall lists
-    total_labels.extend(total_labels_epoch)
-    total_predictions.extend(total_predictions_epoch)
-
-    print(f"Epoch {epoch + 1}/{num_epochs}, Loss: {running_loss / len(data_loader)}, Accuracy: {accuracy}, Precision: {precision}, Recall: {recall}, F1 Score: {f1}")
+    # Print validation metrics for the epoch
+    print(f"Epoch {epoch + 1}/{num_epochs}")
+    print(f"  Training Loss: {running_loss / len(data_loader)}, Accuracy: {accuracy}, Precision: {precision}, Recall: {recall}, F1 Score: {f1}")
+    print(f"  Validation Accuracy: {val_accuracy}, Precision: {val_precision}, Recall: {val_recall}, F1 Score: {val_f1}")
 
 # Calculate overall metrics
 overall_accuracy = round(accuracy_score(total_labels, total_predictions), 4)
