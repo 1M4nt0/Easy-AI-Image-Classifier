@@ -51,16 +51,25 @@ criterion = nn.CrossEntropyLoss()
 optimizer = optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
 
 # Training loop
-num_epochs = 30
+num_epochs = 20
 device = torch.device("cpu")
 model.to(device)
 
-print("Start training...")
+
+# Accuracy: Accuracy measures the overall correctness of the model's predictions. It is the ratio of correctly predicted samples to the total number of samples. An accuracy of 1.0 indicates that all predictions were correct, while a value close to 0.0 indicates poor performance.
+
+# Precision: Precision is the ability of the model to correctly identify positive instances out of all instances predicted as positive. It is calculated as the ratio of true positives to the sum of true positives and false positives. Precision is a useful metric when the cost of false positives is high.
+
+# Recall (Sensitivity or True Positive Rate): Recall measures the ability of the model to correctly identify positive instances out of all actual positive instances. It is calculated as the ratio of true positives to the sum of true positives and false negatives. Recall is particularly important when it is crucial to avoid false negatives.
+
+# F1 Score: The F1 score is the harmonic mean of precision and recall. It provides a balanced measure between precision and recall. The F1 score combines both metrics into a single value and is useful when there is an uneven class distribution or when both false positives and false negatives need to be considered.
+
 
 # Initialize variables to store metrics
 total_labels = []
 total_predictions = []
 
+print("Start training...")
 for epoch in range(num_epochs):
     running_loss = 0.0
     total_labels_epoch = []
@@ -85,10 +94,10 @@ for epoch in range(num_epochs):
         total_predictions_epoch.extend(predicted)
 
     # Calculate metrics for the epoch
-    accuracy = accuracy_score(total_labels_epoch, total_predictions_epoch)
-    precision = precision_score(total_labels_epoch, total_predictions_epoch, average='macro')
-    recall = recall_score(total_labels_epoch, total_predictions_epoch, average='macro')
-    f1 = f1_score(total_labels_epoch, total_predictions_epoch, average='macro')
+    accuracy = round(accuracy_score(total_labels_epoch, total_predictions_epoch), 4)
+    precision = round(precision_score(total_labels_epoch, total_predictions_epoch, average='macro', zero_division=1), 4)
+    recall = round(recall_score(total_labels_epoch, total_predictions_epoch, average='macro', zero_division=1), 4)
+    f1 = round(f1_score(total_labels_epoch, total_predictions_epoch, average='macro', zero_division=1), 4)
 
     # Append metrics to the overall lists
     total_labels.extend(total_labels_epoch)
@@ -97,10 +106,10 @@ for epoch in range(num_epochs):
     print(f"Epoch {epoch + 1}/{num_epochs}, Loss: {running_loss / len(data_loader)}, Accuracy: {accuracy}, Precision: {precision}, Recall: {recall}, F1 Score: {f1}")
 
 # Calculate overall metrics
-overall_accuracy = accuracy_score(total_labels, total_predictions)
-overall_precision = precision_score(total_labels, total_predictions, average='macro')
-overall_recall = recall_score(total_labels, total_predictions, average='macro')
-overall_f1 = f1_score(total_labels, total_predictions, average='macro')
+overall_accuracy = round(accuracy_score(total_labels, total_predictions), 4)
+overall_precision = round(precision_score(total_labels, total_predictions, average='macro', zero_division=1), 4)
+overall_recall = round(recall_score(total_labels, total_predictions, average='macro', zero_division=1), 4)
+overall_f1 = round(f1_score(total_labels, total_predictions, average='macro', zero_division=1), 4)
 
 print(f"Overall Metrics: Accuracy: {overall_accuracy}, Precision: {overall_precision}, Recall: {overall_recall}, F1 Score: {overall_f1}")
 
