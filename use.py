@@ -11,12 +11,12 @@ import torch.nn as nn
 
 # Load pre-trained ResNet-50 model
 model = resnet50(weights=ResNet50_Weights.DEFAULT)
-num_categories = 11  # Change this to match your dataset
+num_categories = 14  # Change this to match your dataset
 num_features = model.fc.in_features
 model.fc = nn.Linear(num_features, num_categories)
 
 # Load the trained model weights
-model.load_state_dict(torch.load('trained_model_backup.pth'))
+model.load_state_dict(torch.load('trained_model.pth'))
 
 # Set the model to evaluation mode
 model.eval()
@@ -33,7 +33,7 @@ output_folder = 'output'
 os.makedirs(output_folder, exist_ok=True)
 
 # Process each image in the "images" folder
-image_folder = 'images'
+image_folder = 'input'
 image_files = os.listdir(image_folder)
 image_extensions = ['.jpg', '.jpeg', '.png', '.webp']
 

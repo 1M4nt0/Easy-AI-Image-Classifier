@@ -8,12 +8,28 @@ import torchvision.transforms as transforms
 from torchvision.datasets import ImageFolder
 from torch.utils.data import DataLoader
 from torchvision.models import resnet50
+from sklearn.metrics import accuracy_score
 from torchvision.models.resnet import ResNet50_Weights
-import torch
-from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
+from PIL import Image
+
+# Set random seed for reproducibility
+random.seed(42)
+torch.manual_seed(42)
 
 # Define the path to the original "data" folder
 original_folder = './data'
+
+# Recursively search for PNG images and convert them to RGBA
+for root, dirs, files in os.walk(original_folder):
+    for file in files:
+        if file.endswith('.png'):
+            image_path = os.path.join(root, file)
+            im = Image.open(image_path)
+            if im.format == 'PNG' and im.mode != 'RGBA':
+                im = im.convert('RGBA')
+                im.save(image_path)
+
+print("Conversion completed!")
 
 # Define the path to the new "training" and "validation" folders
 training_folder = './training'
@@ -59,21 +75,7 @@ for root, dirs, files in os.walk(original_folder):
 
 # Load pre-trained ResNet-50 model
 model = resnet50(weights=ResNet50_Weights.DEFAULT)
-
-# Convert palette images to RGBA format
-def convert_palette_to_rgba(image):
-    if isinstance(image, int):
-        return image  # Skip non-image targets
-    if image.mode == 'P' and 'transparency' in image.info:
-        try:
-            image = image.convert('RGBA')
-        except Exception:
-            pass
-    return image
-
-
-# Modify the last layer for your own categories
-num_categories = 11  # Change this to match your dataset
+num_categories = 14  # Change this to match your dataset
 num_features = model.fc.in_features
 model.fc = nn.Linear(num_features, num_categories)
 
@@ -85,14 +87,14 @@ transform = transforms.Compose([
 ])
 
 # Create the ImageFolder dataset for training
-training_dataset = ImageFolder(training_folder, transform=transform, target_transform=convert_palette_to_rgba)
+training_dataset = ImageFolder(training_folder, transform=transform)
 
 # Create a data loader for the training dataset
 batch_size = 16
 training_loader = DataLoader(training_dataset, batch_size=batch_size, shuffle=True)
 
 # Create the ImageFolder dataset for validation
-validation_dataset = ImageFolder(validation_folder, transform=transform, target_transform=convert_palette_to_rgba)
+validation_dataset = ImageFolder(validation_folder, transform=transform)
 
 # Create a data loader for the validation dataset
 validation_loader = DataLoader(validation_dataset, batch_size=batch_size, shuffle=False)
@@ -102,19 +104,14 @@ criterion = nn.CrossEntropyLoss()
 optimizer = optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
 
 # Training loop
-num_epochs = 20
+num_epochs = 10
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 model.to(device)
 
-# Initialize variables to store metrics
-total_labels = []
-total_predictions = []
-
-print("Start training...")
+print("Training...")
 for epoch in range(num_epochs):
+    model.train()  # Set the model to training mode
     running_loss = 0.0
-    total_labels_epoch = []
-    total_predictions_epoch = []
 
     for images, labels in training_loader:
         images, labels = images.to(device), labels.to(device)
@@ -125,54 +122,25 @@ for epoch in range(num_epochs):
         optimizer.step()
         running_loss += loss.item()
 
-        # Convert tensor predictions and labels to numpy arrays
-        _, predicted = torch.max(outputs.data, 1)
-        predicted = predicted.cpu().numpy()
-        labels = labels.cpu().numpy()
-
-        # Append predictions and labels for the epoch
-        total_labels_epoch.extend(labels)
-        total_predictions_epoch.extend(predicted)
-
-    # Calculate metrics for the training epoch
-    accuracy = round(accuracy_score(total_labels_epoch, total_predictions_epoch), 4)
-    precision = round(precision_score(total_labels_epoch, total_predictions_epoch, average='macro', zero_division=1), 4)
-    recall = round(recall_score(total_labels_epoch, total_predictions_epoch, average='macro', zero_division=1), 4)
-    f1 = round(f1_score(total_labels_epoch, total_predictions_epoch, average='macro', zero_division=1), 4)
-
-    # Append metrics to the overall lists
-    total_labels.extend(total_labels_epoch)
-    total_predictions.extend(total_predictions_epoch)
-
-    print(f"Training - Epoch {epoch + 1}/{num_epochs}, Loss: {running_loss / len(training_loader)}, Accuracy: {accuracy}, Precision: {precision}, Recall: {recall}, F1 Score: {f1}")
 
     # Validation loop
     model.eval()  # Set the model to evaluation mode
 
-    val_total_labels = []
-    val_total_predictions = []
-
     with torch.no_grad():
+        val_total_labels = []
+        val_total_predictions = []
+
         for val_images, val_labels in validation_loader:
             val_images, val_labels = val_images.to(device), val_labels.to(device)
             val_outputs = model(val_images)
             _, val_predicted = torch.max(val_outputs.data, 1)
 
-            # Convert tensor predictions and labels to numpy arrays
-            val_predicted = val_predicted.cpu().numpy()
-            val_labels = val_labels.cpu().numpy()
+            val_total_labels.extend(val_labels.cpu().numpy())
+            val_total_predictions.extend(val_predicted.cpu().numpy())
 
-            # Append predictions and labels for validation
-            val_total_labels.extend(val_labels)
-            val_total_predictions.extend(val_predicted)
-
-    # Calculate metrics for the validation set
-    val_accuracy = round(accuracy_score(val_total_labels, val_total_predictions), 4)
-    val_precision = round(precision_score(val_total_labels, val_total_predictions, average='macro', zero_division=1), 4)
-    val_recall = round(recall_score(val_total_labels, val_total_predictions, average='macro', zero_division=1), 4)
-    val_f1 = round(f1_score(val_total_labels, val_total_predictions, average='macro', zero_division=1), 4)
-
-    print(f"Validation - Epoch {epoch + 1}/{num_epochs}, Accuracy: {val_accuracy}, Precision: {val_precision}, Recall: {val_recall}, F1 Score: {val_f1}")
+    val_accuracy = round(accuracy_score(val_total_labels, val_total_predictions),4)
+    val_loss = round(running_loss / len(training_loader), 4)
+    print(f"Epoch {epoch + 1}/{num_epochs}, Loss: {val_loss}, Validation Accuracy: {val_accuracy}")
 
 # Save the trained model
 torch.save(model.state_dict(), 'trained_model.pth')
