@@ -11,10 +11,22 @@ from torchvision.models import resnet50
 from sklearn.metrics import accuracy_score
 from torchvision.models.resnet import ResNet50_Weights
 from PIL import Image
+from utils import count_folders
 
 # Set random seed for reproducibility
 random.seed(42)
 torch.manual_seed(42)
+
+model_name = input("Define the name for your model: ")
+
+# Define the percentage of images to allocate for training (e.g., 80%)
+train_percentage = float(input("Define the percentage of images to allocate for training (e.g., 0.8): "))
+
+batch_size = int(input("Define the batch size for training your model (e.g., 16): "))
+
+num_epochs = int(input("Define the number of training epochs: "))
+
+num_categories = count_folders("data")  # Change this to match your dataset
 
 # Define the path to the original "data" folder
 original_folder = './data'
@@ -31,6 +43,8 @@ for root, dirs, files in os.walk(original_folder):
 
 print("Conversion completed!")
 
+print(f"Categories found: {num_categories}")
+
 # Define the path to the new "training" and "validation" folders
 training_folder = './training'
 validation_folder = './validation'
@@ -39,8 +53,7 @@ validation_folder = './validation'
 os.makedirs(training_folder, exist_ok=True)
 os.makedirs(validation_folder, exist_ok=True)
 
-# Define the percentage of images to allocate for training (e.g., 80%)
-train_percentage = 0.8
+
 
 # Randomly split images into training and validation folders
 for root, dirs, files in os.walk(original_folder):
@@ -75,7 +88,7 @@ for root, dirs, files in os.walk(original_folder):
 
 # Load pre-trained ResNet-50 model
 model = resnet50(weights=ResNet50_Weights.DEFAULT)
-num_categories = 14  # Change this to match your dataset
+
 num_features = model.fc.in_features
 model.fc = nn.Linear(num_features, num_categories)
 
@@ -90,7 +103,6 @@ transform = transforms.Compose([
 training_dataset = ImageFolder(training_folder, transform=transform)
 
 # Create a data loader for the training dataset
-batch_size = 16
 training_loader = DataLoader(training_dataset, batch_size=batch_size, shuffle=True)
 
 # Create the ImageFolder dataset for validation
@@ -104,7 +116,7 @@ criterion = nn.CrossEntropyLoss()
 optimizer = optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
 
 # Training loop
-num_epochs = 10
+
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 model.to(device)
 
@@ -143,4 +155,4 @@ for epoch in range(num_epochs):
     print(f"Epoch {epoch + 1}/{num_epochs}, Loss: {val_loss}, Validation Accuracy: {val_accuracy}")
 
 # Save the trained model
-torch.save(model.state_dict(), 'trained_model.pth')
+torch.save(model.state_dict(), f'models/{model_name}_e{num_epochs}.pth')

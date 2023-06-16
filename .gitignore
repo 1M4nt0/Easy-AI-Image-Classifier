@@ -1,6 +1,7 @@
-*
-!train.py
-!use.py
-!test.py
-!.gitignore
-!README.MD
+input
+output
+training
+validation
+models
+data/**
+!data/README.MD
