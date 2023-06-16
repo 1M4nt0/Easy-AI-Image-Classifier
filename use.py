@@ -1,22 +1,23 @@
-import torch
-import torchvision.transforms as transforms
-from torchvision.datasets import ImageFolder
-from torch.utils.data import DataLoader
-from torchvision.models import resnet50
 import os
 import shutil
-from PIL import Image
-from torchvision.models.resnet import ResNet50_Weights
+import torch
 import torch.nn as nn
+import torchvision.transforms as transforms
+from torchvision.models import resnet50
+from torchvision.models.resnet import ResNet50_Weights
+from PIL import Image
+
+model_name = input("Insert the name of the model to use (without extension): ")
 
 # Load pre-trained ResNet-50 model
 model = resnet50(weights=ResNet50_Weights.DEFAULT)
-num_categories = 14  # Change this to match your dataset
+
+num_categories = int(input("Insert the number of categories to classify photos (c[n] of model name): "))
 num_features = model.fc.in_features
 model.fc = nn.Linear(num_features, num_categories)
 
 # Load the trained model weights
-model.load_state_dict(torch.load('trained_model.pth'))
+model.load_state_dict(torch.load(f'models/{model_name}.pth'))
 
 # Set the model to evaluation mode
 model.eval()
@@ -34,16 +35,9 @@ os.makedirs(output_folder, exist_ok=True)
 
 # Process each image in the "images" folder
 image_folder = 'input'
-image_files = os.listdir(image_folder)
-image_extensions = ['.jpg', '.jpeg', '.png', '.webp']
+image_files = [f for f in os.listdir(image_folder) if os.path.splitext(f)[1].lower() in ['.jpg', '.jpeg', '.png', '.webp']]
 
 for image_file in image_files:
-    # Check if the file is an image
-    _, ext = os.path.splitext(image_file)
-    if ext.lower() not in image_extensions:
-        print(f"Skipped {image_file}: Not an image file")
-        continue
-
     # Load and transform the image
     image_path = os.path.join(image_folder, image_file)
     image = Image.open(image_path).convert('RGB')

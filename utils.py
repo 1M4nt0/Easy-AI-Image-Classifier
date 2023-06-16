@@ -1,4 +1,5 @@
 import os
+import shutil
 
 def count_folders(path):
     folder_count = 0
@@ -12,3 +13,10 @@ def count_folders(path):
             folder_count += 1
 
     return folder_count
+
+def remove_folder(path):
+    if os.path.exists(path):
+        shutil.rmtree(path)
+        print(f"Folder '{path}' has been removed.")
+    else:
+        print(f"Folder '{path}' does not exist.")

@@ -11,7 +11,7 @@ from torchvision.models import resnet50
 from sklearn.metrics import accuracy_score
 from torchvision.models.resnet import ResNet50_Weights
 from PIL import Image
-from utils import count_folders
+from utils import count_folders, remove_folder
 
 # Set random seed for reproducibility
 random.seed(42)
@@ -28,9 +28,15 @@ num_epochs = int(input("Define the number of training epochs: "))
 
 num_categories = count_folders("data")  # Change this to match your dataset
 
+remove_folder("training")
+remove_folder("validation")
+remove_folder("output")
+
+
 # Define the path to the original "data" folder
 original_folder = './data'
 
+print("\n\nConverting PNGs images to RGBA")
 # Recursively search for PNG images and convert them to RGBA
 for root, dirs, files in os.walk(original_folder):
     for file in files:
@@ -41,9 +47,9 @@ for root, dirs, files in os.walk(original_folder):
                 im = im.convert('RGBA')
                 im.save(image_path)
 
-print("Conversion completed!")
+print("Conversion completed!\n\n")
 
-print(f"Categories found: {num_categories}")
+print(f"Categories found: {num_categories}\n\n")
 
 # Define the path to the new "training" and "validation" folders
 training_folder = './training'
@@ -52,8 +58,6 @@ validation_folder = './validation'
 # Create the "training" and "validation" folders if they don't exist
 os.makedirs(training_folder, exist_ok=True)
 os.makedirs(validation_folder, exist_ok=True)
-
-
 
 # Randomly split images into training and validation folders
 for root, dirs, files in os.walk(original_folder):
@@ -155,4 +159,4 @@ for epoch in range(num_epochs):
     print(f"Epoch {epoch + 1}/{num_epochs}, Loss: {val_loss}, Validation Accuracy: {val_accuracy}")
 
 # Save the trained model
-torch.save(model.state_dict(), f'models/{model_name}_e{num_epochs}.pth')
+torch.save(model.state_dict(), f'models/{model_name}_e{num_epochs}_c{num_categories}.pth')

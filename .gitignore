@@ -3,5 +3,6 @@ output
 training
 validation
 models
+__pycache__
 data/**
 !data/README.MD
